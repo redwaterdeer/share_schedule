@@ -2,11 +2,11 @@
 <html lang="ko">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <title>Share Schedule</title>
-    <!-- 한 화면만 보이게: 모바일에서 외부 CSS가 늦게/실패해도 레이아웃이 깨지지 않도록 -->
+    <!-- 한 화면만 보이게 + 모바일 첫 페인트: 외부 CSS 지연 시에도 폭·숨김 유지 -->
     <style>
       .view:not(.view-active) {
         display: none !important;
@@ -14,7 +14,27 @@
       .view.view-active {
         display: block !important;
       }
+      html {
+        -webkit-text-size-adjust: 100%;
+        text-size-adjust: 100%;
+      }
+      body {
+        margin: 0;
+        width: 100%;
+      }
+      .app-shell {
+        width: 100%;
+        max-width: 420px;
+        margin-left: auto;
+        margin-right: auto;
+        padding: 18px 22px 28px;
+        box-sizing: border-box;
+      }
+      .top-indicator {
+        display: none !important;
+      }
     </style>
+    <link rel="preload" href="./styles.css" as="style" />
     <link rel="stylesheet" href="./styles.css" />
   </head>
   <body>
