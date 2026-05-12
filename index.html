@@ -2,9 +2,38 @@
 <html lang="ko">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <script>
+      (function () {
+        if (!location.protocol || location.protocol === "file:") return;
+        var o = location.origin;
+        if (!o || o === "null") return;
+        var p = location.pathname || "/";
+        var basePath;
+        if (p.endsWith("/")) basePath = p;
+        else {
+          var slash = p.lastIndexOf("/");
+          var last = slash >= 0 ? p.slice(slash + 1) : p;
+          basePath = last.indexOf(".") >= 0 ? (slash >= 0 ? p.slice(0, slash + 1) : "/") : p + "/";
+        }
+        if (!basePath.endsWith("/")) basePath += "/";
+        var b = document.createElement("base");
+        b.href = o + basePath;
+        var head = document.head;
+        var ch = head.querySelector("meta[charset]");
+        if (ch) ch.insertAdjacentElement("afterend", b);
+        else head.insertAdjacentElement("afterbegin", b);
+      })();
+    </script>
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=5, viewport-fit=cover, shrink-to-fit=no"
+    />
+    <meta name="theme-color" content="#f46524" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#1a1a1a" media="(prefers-color-scheme: dark)" />
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="format-detection" content="telephone=no" />
     <title>Share Schedule</title>
     <!-- 한 화면만 보이게 + 모바일 첫 페인트: 외부 CSS 지연 시에도 폭·숨김 유지 -->
     <style>
@@ -34,8 +63,8 @@
         display: none !important;
       }
     </style>
-    <link rel="preload" href="./styles.css" as="style" />
-    <link rel="stylesheet" href="./styles.css" />
+    <link rel="preload" href="styles.css" as="style" />
+    <link rel="stylesheet" href="styles.css" />
   </head>
   <body>
     <main class="app-shell">
@@ -391,6 +420,6 @@
       </section>
     </main>
 
-    <script src="./app.js"></script>
+    <script src="app.js"></script>
   </body>
 </html>
