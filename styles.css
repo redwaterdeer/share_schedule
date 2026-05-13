@@ -396,17 +396,23 @@ body {
   color: #4f4f4f;
 }
 
-/* 날짜 입력: 그리드 열 안에서 다른 입력칸과 동일 너비로 맞춤 */
+/* 날짜 입력: 네이티브 date 위젯이 그리드보다 넓게 그려지는 경우(모바일 등) 시각 너비를 아래 필드와 동일하게 */
 .sc-input-slot {
   min-width: 0;
   width: 100%;
+  max-width: 100%;
+  display: flex;
+  overflow: hidden;
+  border-radius: 8px;
 }
 
 .schedule-create-form .sc-input-slot input.sc-input[type="date"] {
-  display: block;
-  width: 100%;
+  flex: 1 1 0;
   min-width: 0;
+  width: 0;
   max-width: 100%;
+  display: block;
+  box-sizing: border-box;
 }
 
 .sc-input:focus,
