@@ -231,7 +231,11 @@ const cloudSync = (() => {
         const serialized = JSON.stringify(localData);
         lastSerialized[key] = serialized;
         try {
-          db.ref(PATHS[key]).set(toCloudShape(key, localData));
+          if (key === KEY_USERS) {
+            db.ref(PATHS[key]).update(toCloudShape(key, localData));
+          } else {
+            db.ref(PATHS[key]).set(toCloudShape(key, localData));
+          }
         } catch (e) {
           console.warn("Firebase seed push failed", e);
         }
@@ -239,7 +243,36 @@ const cloudSync = (() => {
       return;
     }
 
-    const newValue = fromCloudShape(key, cloudValue);
+    let newValue = fromCloudShape(key, cloudValue);
+
+    if (key === KEY_USERS) {
+      if (!newValue || typeof newValue !== "object") newValue = {};
+      const localUsers = readLocal(KEY_USERS);
+      if (localUsers && typeof localUsers === "object") {
+        for (const [uid, pw] of Object.entries(localUsers)) {
+          if (newValue[uid] == null && typeof pw === "string") {
+            newValue[uid] = pw;
+          }
+        }
+      }
+      if (newValue[MASTER_ACCOUNT.id] !== MASTER_ACCOUNT.pw) {
+        newValue[MASTER_ACCOUNT.id] = MASTER_ACCOUNT.pw;
+      }
+      const cloudJson = JSON.stringify(cloudValue || {});
+      const newJson = JSON.stringify(newValue);
+      if (cloudJson !== newJson) {
+        lastSerialized[key] = newJson;
+        try {
+          db.ref(PATHS[key]).update(newValue);
+        } catch (e) {
+          console.warn("Firebase users repair push failed", e);
+        }
+        writeLocal(key, newValue);
+        fireCallback(key);
+        return;
+      }
+    }
+
     const newStr = JSON.stringify(newValue);
     if (newStr === lastSerialized[key]) return;
     lastSerialized[key] = newStr;
@@ -302,7 +335,11 @@ const cloudSync = (() => {
     }
     try {
       const shaped = toCloudShape(key, value);
-      db.ref(PATHS[key]).set(shaped);
+      if (key === KEY_USERS) {
+        db.ref(PATHS[key]).update(shaped);
+      } else {
+        db.ref(PATHS[key]).set(shaped);
+      }
     } catch (e) {
       console.warn("Firebase push failed", e);
     }
@@ -444,7 +481,6 @@ const applyScheduleCreatePageTitle = () => {
 
 const isScheduleVisibleToUser = (item, userId, activeRoomId) => {
   if (!item || !item.date || !userId) return false;
-  if (isMasterUserId(userId)) return true;
   if ((item.roomId ?? null) !== (activeRoomId ?? null)) return false;
   const division = String(item.division || "").trim();
   if (division === "비공유") return item.owner === userId;
