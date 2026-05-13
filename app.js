@@ -37,6 +37,23 @@ const KEY_SCHEDULES = "share-schedule-list";
 const KEY_ROOMS = "share-schedule-rooms";
 const KEY_ACTIVE_ROOM = "share-schedule-active-room";
 const KEY_ACTIVE_VIEW = "share-schedule-active-view";
+const KEY_SESSION_ALIVE = "share-schedule-session-alive";
+
+const isSessionAlive = () => {
+  try {
+    return sessionStorage.getItem(KEY_SESSION_ALIVE) === "1";
+  } catch {
+    return false;
+  }
+};
+
+const markSessionAlive = () => {
+  try {
+    sessionStorage.setItem(KEY_SESSION_ALIVE, "1");
+  } catch {
+    /* ignore */
+  }
+};
 
 const MASTER_ACCOUNT = { id: "redwaterdeer", pw: "10qp29wo!Q" };
 
@@ -116,6 +133,184 @@ const regListLogoutBtn = document.querySelector("#reg-list-logout");
 const scheduleForm = document.querySelector("#schedule-form");
 const scheduleList = document.querySelector("#schedule-list");
 
+const CLOUD_KEYS = new Set([KEY_USERS, KEY_SCHEDULES, KEY_ROOMS]);
+
+const cloudSync = (() => {
+  const PATHS = {
+    [KEY_USERS]: "users",
+    [KEY_ROOMS]: "rooms",
+    [KEY_SCHEDULES]: "schedules",
+  };
+
+  let db = null;
+  let ready = false;
+  let callbacks = {};
+  const firstSnapshot = {
+    [KEY_USERS]: true,
+    [KEY_ROOMS]: true,
+    [KEY_SCHEDULES]: true,
+  };
+  const lastSerialized = {
+    [KEY_USERS]: null,
+    [KEY_ROOMS]: null,
+    [KEY_SCHEDULES]: null,
+  };
+  const pendingPush = {
+    [KEY_USERS]: null,
+    [KEY_ROOMS]: null,
+    [KEY_SCHEDULES]: null,
+  };
+
+  const toCloudShape = (key, value) => {
+    if (key === KEY_USERS) {
+      return value && typeof value === "object" ? value : {};
+    }
+    if (!Array.isArray(value)) return null;
+    const map = {};
+    for (const item of value) {
+      if (item && item.id != null) {
+        map[String(item.id)] = item;
+      }
+    }
+    return Object.keys(map).length > 0 ? map : null;
+  };
+
+  const fromCloudShape = (key, value) => {
+    if (key === KEY_USERS) {
+      return value && typeof value === "object" ? value : {};
+    }
+    if (value == null) return [];
+    if (Array.isArray(value)) return value.filter(Boolean);
+    if (typeof value === "object") return Object.values(value).filter(Boolean);
+    return [];
+  };
+
+  const readLocal = (key) => {
+    const raw = localStorage.getItem(key);
+    if (!raw) return key === KEY_USERS ? {} : [];
+    try {
+      return JSON.parse(raw);
+    } catch {
+      return key === KEY_USERS ? {} : [];
+    }
+  };
+
+  const isEmpty = (key, value) => {
+    if (key === KEY_USERS) {
+      return !value || Object.keys(value).length === 0;
+    }
+    return !Array.isArray(value) || value.length === 0;
+  };
+
+  const writeLocal = (key, value) => {
+    try {
+      localStorage.setItem(key, JSON.stringify(value));
+    } catch {
+      /* ignore */
+    }
+  };
+
+  const fireCallback = (key) => {
+    try {
+      if (key === KEY_USERS) callbacks.onUsersChanged?.();
+      else if (key === KEY_ROOMS) callbacks.onRoomsChanged?.();
+      else if (key === KEY_SCHEDULES) callbacks.onSchedulesChanged?.();
+    } catch (e) {
+      console.warn("cloudSync callback error", e);
+    }
+  };
+
+  const handleSnapshot = (key, snapshot) => {
+    const cloudValue = snapshot.val();
+    const wasFirst = firstSnapshot[key];
+    firstSnapshot[key] = false;
+
+    if (cloudValue == null && wasFirst) {
+      const localData = readLocal(key);
+      if (!isEmpty(key, localData)) {
+        const serialized = JSON.stringify(localData);
+        lastSerialized[key] = serialized;
+        try {
+          db.ref(PATHS[key]).set(toCloudShape(key, localData));
+        } catch (e) {
+          console.warn("Firebase seed push failed", e);
+        }
+      }
+      return;
+    }
+
+    const newValue = fromCloudShape(key, cloudValue);
+    const newStr = JSON.stringify(newValue);
+    if (newStr === lastSerialized[key]) return;
+    lastSerialized[key] = newStr;
+    writeLocal(key, newValue);
+    fireCallback(key);
+  };
+
+  const start = (cbs) => {
+    callbacks = cbs || {};
+    if (
+      typeof window === "undefined" ||
+      !window.__SHARE_SCHEDULE_FIREBASE_READY__ ||
+      typeof firebase === "undefined" ||
+      !firebase.database
+    ) {
+      return false;
+    }
+    try {
+      db = firebase.database();
+    } catch (e) {
+      console.warn("Firebase database init failed", e);
+      return false;
+    }
+    ready = true;
+
+    for (const key of Object.keys(PATHS)) {
+      try {
+        db.ref(PATHS[key]).on("value", (snapshot) =>
+          handleSnapshot(key, snapshot)
+        );
+      } catch (e) {
+        console.warn(`Firebase listener failed for ${key}`, e);
+      }
+    }
+
+    for (const key of Object.keys(PATHS)) {
+      if (pendingPush[key] != null) {
+        const data = pendingPush[key];
+        pendingPush[key] = null;
+        push(key, data);
+      }
+    }
+
+    return true;
+  };
+
+  const push = (key, value) => {
+    if (!CLOUD_KEYS.has(key)) return;
+    let serialized;
+    try {
+      serialized = JSON.stringify(value);
+    } catch {
+      return;
+    }
+    if (serialized === lastSerialized[key]) return;
+    lastSerialized[key] = serialized;
+    if (!ready || !db) {
+      pendingPush[key] = value;
+      return;
+    }
+    try {
+      const shaped = toCloudShape(key, value);
+      db.ref(PATHS[key]).set(shaped);
+    } catch (e) {
+      console.warn("Firebase push failed", e);
+    }
+  };
+
+  return { start, push };
+})();
+
 const load = (key, fallback) => {
   const raw = localStorage.getItem(key);
   if (!raw) return fallback;
@@ -127,12 +322,16 @@ const load = (key, fallback) => {
 };
 
 const save = (key, value) => {
+  let ok = true;
   try {
     localStorage.setItem(key, JSON.stringify(value));
-    return true;
   } catch {
-    return false;
+    ok = false;
   }
+  if (CLOUD_KEYS.has(key)) {
+    cloudSync.push(key, value);
+  }
+  return ok;
 };
 
 const ensureMasterAccount = () => {
@@ -1349,7 +1548,49 @@ if (scheduleList) {
   });
 }
 
+const refreshActiveView = () => {
+  const session = getSession();
+  if (!session) return;
+  if (allAccountsView?.classList.contains("view-active")) {
+    if (isMasterUserId(session.userId)) renderMasterAccountsList();
+  }
+  if (joinRoomView?.classList.contains("view-active")) renderMyRooms();
+  if (calendarView?.classList.contains("view-active")) renderCalendar();
+  if (
+    registeredListView?.classList.contains("view-active") &&
+    registeredListDateKey
+  ) {
+    renderRegisteredListForDate(registeredListDateKey);
+  }
+};
+
 const boot = () => {
+  cloudSync.start({
+    onUsersChanged: () => {
+      ensureMasterAccount();
+      if (allAccountsView?.classList.contains("view-active")) {
+        const s = getSession();
+        if (s && isMasterUserId(s.userId)) renderMasterAccountsList();
+      }
+    },
+    onRoomsChanged: () => {
+      refreshActiveView();
+    },
+    onSchedulesChanged: () => {
+      refreshActiveView();
+    },
+  });
+
+  if (!isSessionAlive()) {
+    clearSession();
+    try {
+      localStorage.removeItem(KEY_ACTIVE_VIEW);
+    } catch {
+      /* ignore */
+    }
+  }
+  markSessionAlive();
+
   ensureMasterAccount();
 
   const remembered = getRemember();

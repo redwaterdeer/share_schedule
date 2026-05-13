@@ -666,6 +666,31 @@
       </section>
     </main>
 
+    <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-database-compat.js"></script>
+    <script>
+      (function () {
+        try {
+          var firebaseConfig = {
+            apiKey: "AIzaSyD7R7HHqXp0EQV5wJu1dMASZFOcn7J7GhY",
+            authDomain: "share-schedule-c826c.firebaseapp.com",
+            databaseURL:
+              "https://share-schedule-c826c-default-rtdb.asia-southeast1.firebasedatabase.app",
+            projectId: "share-schedule-c826c",
+            storageBucket: "share-schedule-c826c.firebasestorage.app",
+            messagingSenderId: "655175628191",
+            appId: "1:655175628191:web:7ef6e4d9a6c586128b39aa",
+          };
+          if (typeof firebase !== "undefined" && firebase.initializeApp) {
+            firebase.initializeApp(firebaseConfig);
+            window.__SHARE_SCHEDULE_FIREBASE_READY__ = true;
+          }
+        } catch (e) {
+          window.__SHARE_SCHEDULE_FIREBASE_READY__ = false;
+          console.warn("Firebase 초기화 실패:", e);
+        }
+      })();
+    </script>
     <script src="app.js"></script>
   </body>
 </html>
