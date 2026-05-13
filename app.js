@@ -1361,6 +1361,16 @@ if (calEditBtn) {
   });
 }
 
+if (scDateInput && typeof scDateInput.showPicker === "function") {
+  scDateInput.addEventListener("focus", () => {
+    try {
+      scDateInput.showPicker();
+    } catch {
+      /* 일부 브라우저·환경에서 미지원 또는 보안 제한 */
+    }
+  });
+}
+
 if (calendarGrid) {
   calendarGrid.addEventListener("click", (event) => {
     const t = event.target;
