@@ -107,6 +107,13 @@ const scheduleCreateEditAccountBtn = document.querySelector("#schedule-create-ed
 const scCategoryInput = document.querySelector("#sc-category");
 const scDivisionInput = document.querySelector("#sc-division");
 const scDateInput = document.querySelector("#sc-date");
+const scDateTriggerBtn = document.querySelector("#sc-date-trigger");
+const scDateLabelSpan = document.querySelector("#sc-date-label");
+const scDatePopoverEl = document.querySelector("#sc-date-popover");
+const scDateGridEl = document.querySelector("#sc-date-grid");
+const scDatePopoverTitleEl = document.querySelector("#sc-date-popover-title");
+const scDatePrevMBtn = document.querySelector("#sc-date-prev-m");
+const scDateNextMBtn = document.querySelector("#sc-date-next-m");
 const scDurationInput = document.querySelector("#sc-duration");
 const scTitleInput = document.querySelector("#sc-title");
 const scContentInput = document.querySelector("#sc-content");
@@ -426,6 +433,8 @@ const setView = (type) => {
   const viewType =
     type === "all-accounts" && !isMasterUserId(session?.userId) ? "menu" : type;
 
+  if (viewType !== "schedule-create") closeScDatePopover();
+
   if (loginView) loginView.classList.toggle("view-active", viewType === "login");
   if (signupView) signupView.classList.toggle("view-active", viewType === "signup");
   if (menuView) menuView.classList.toggle("view-active", viewType === "menu");
@@ -629,6 +638,185 @@ const renderRegisteredListForDate = (dateKey) => {
 };
 
 const pad2 = (n) => String(n).padStart(2, "0");
+
+const scDatePickerView = {
+  year: new Date().getFullYear(),
+  month: new Date().getMonth() + 1,
+};
+let scDateOutsideCloseFn = null;
+
+const syncScDateTriggerLabel = () => {
+  if (!scDateTriggerBtn || !scDateLabelSpan || !scDateInput) return;
+  const v = String(scDateInput.value || "").trim();
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(v)) {
+    scDateTriggerBtn.classList.add("is-placeholder");
+    scDateLabelSpan.textContent = "선택해주세요";
+    return;
+  }
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(v);
+  if (!m) return;
+  scDateTriggerBtn.classList.remove("is-placeholder");
+  scDateLabelSpan.textContent = `${Number(m[1])}. ${Number(m[2])}. ${Number(m[3])}.`;
+};
+
+const closeScDatePopover = () => {
+  if (!scDatePopoverEl || !scDateTriggerBtn) return;
+  scDatePopoverEl.hidden = true;
+  scDateTriggerBtn.setAttribute("aria-expanded", "false");
+  if (scDateOutsideCloseFn) {
+    document.removeEventListener("pointerdown", scDateOutsideCloseFn, true);
+    scDateOutsideCloseFn = null;
+  }
+};
+
+const renderScDatePickerGrid = () => {
+  if (!scDateGridEl || !scDatePopoverTitleEl) return;
+  const { year, month } = scDatePickerView;
+  scDatePopoverTitleEl.textContent = `${year}년 ${month}월`;
+  const firstOfMonth = new Date(year, month - 1, 1);
+  const startWeekday = firstOfMonth.getDay();
+  const daysInMonth = new Date(year, month, 0).getDate();
+  const daysInPrevMonth = new Date(year, month - 1, 0).getDate();
+  const prevYear = month === 1 ? year - 1 : year;
+  const prevMonth = month === 1 ? 12 : month - 1;
+  const nextYear = month === 12 ? year + 1 : year;
+  const nextMonth = month === 12 ? 1 : month + 1;
+  const selected = String(scDateInput?.value || "").trim();
+  scDateGridEl.innerHTML = "";
+  for (let row = 0; row < 6; row++) {
+    for (let col = 0; col < 7; col++) {
+      const cellIndex = row * 7 + col;
+      const dayNumberInMonth = cellIndex - startWeekday + 1;
+      let displayDay;
+      let cellYear = year;
+      let cellMonth = month;
+      let isOut = false;
+      if (dayNumberInMonth < 1) {
+        displayDay = daysInPrevMonth + dayNumberInMonth;
+        cellYear = prevYear;
+        cellMonth = prevMonth;
+        isOut = true;
+      } else if (dayNumberInMonth > daysInMonth) {
+        displayDay = dayNumberInMonth - daysInMonth;
+        cellYear = nextYear;
+        cellMonth = nextMonth;
+        isOut = true;
+      } else {
+        displayDay = dayNumberInMonth;
+      }
+      const dateKey = `${cellYear}-${pad2(cellMonth)}-${pad2(displayDay)}`;
+      if (isOut) {
+        const span = document.createElement("span");
+        span.className = "sc-date-cell-out";
+        span.textContent = String(displayDay);
+        scDateGridEl.appendChild(span);
+      } else {
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.className = "sc-date-day";
+        btn.textContent = String(displayDay);
+        btn.dataset.dateKey = dateKey;
+        if (col === 0) btn.classList.add("is-sun");
+        if (col === 6) btn.classList.add("is-sat");
+        if (dateKey === selected) btn.classList.add("is-selected");
+        scDateGridEl.appendChild(btn);
+      }
+    }
+  }
+};
+
+const bumpScDatePickerMonth = (delta) => {
+  let m = scDatePickerView.month + delta;
+  let y = scDatePickerView.year;
+  if (m > 12) {
+    m = 1;
+    y += 1;
+  } else if (m < 1) {
+    m = 12;
+    y -= 1;
+  }
+  scDatePickerView.month = m;
+  scDatePickerView.year = y;
+  renderScDatePickerGrid();
+};
+
+const openScDatePopover = () => {
+  if (!scDatePopoverEl || !scDateTriggerBtn || !scDateGridEl) return;
+  if (scDateOutsideCloseFn) {
+    document.removeEventListener("pointerdown", scDateOutsideCloseFn, true);
+    scDateOutsideCloseFn = null;
+  }
+  const cur = String(scDateInput?.value || "").trim();
+  if (/^\d{4}-\d{2}-\d{2}$/.test(cur)) {
+    const p = cur.split("-").map(Number);
+    scDatePickerView.year = p[0];
+    scDatePickerView.month = p[1];
+  } else {
+    const t = new Date();
+    scDatePickerView.year = t.getFullYear();
+    scDatePickerView.month = t.getMonth() + 1;
+  }
+  scDatePopoverEl.hidden = false;
+  scDateTriggerBtn.setAttribute("aria-expanded", "true");
+  renderScDatePickerGrid();
+  setTimeout(() => {
+    scDateOutsideCloseFn = (ev) => {
+      const t = ev.target;
+      if (!(t instanceof Node)) return;
+      if (scDatePopoverEl.contains(t) || scDateTriggerBtn.contains(t)) return;
+      closeScDatePopover();
+    };
+    document.addEventListener("pointerdown", scDateOutsideCloseFn, true);
+  }, 0);
+};
+
+if (scDateGridEl && scDateInput) {
+  scDateGridEl.addEventListener("click", (e) => {
+    const t = e.target;
+    if (!(t instanceof HTMLElement)) return;
+    const btn = t.closest(".sc-date-day");
+    if (!btn || !btn.dataset.dateKey) return;
+    scDateInput.value = btn.dataset.dateKey;
+    syncScDateTriggerLabel();
+    closeScDatePopover();
+  });
+}
+
+if (scDateTriggerBtn && scDatePopoverEl) {
+  scDateTriggerBtn.addEventListener("click", () => {
+    if (scDatePopoverEl.hidden) openScDatePopover();
+    else closeScDatePopover();
+  });
+}
+
+if (scDatePrevMBtn) {
+  scDatePrevMBtn.addEventListener("click", (e) => {
+    e.stopPropagation();
+    bumpScDatePickerMonth(-1);
+  });
+}
+
+if (scDateNextMBtn) {
+  scDateNextMBtn.addEventListener("click", (e) => {
+    e.stopPropagation();
+    bumpScDatePickerMonth(1);
+  });
+}
+
+document.addEventListener("keydown", (e) => {
+  if (e.key !== "Escape") return;
+  if (!scDatePopoverEl || scDatePopoverEl.hidden) return;
+  closeScDatePopover();
+});
+
+if (scheduleCreateForm) {
+  scheduleCreateForm.addEventListener("reset", () => {
+    closeScDatePopover();
+    requestAnimationFrame(() => syncScDateTriggerLabel());
+  });
+}
+
+syncScDateTriggerLabel();
 
 const renderCalendar = () => {
   if (!calendarGrid || !calYearEl || !calMonthEl) return;
@@ -1361,15 +1549,6 @@ if (calEditBtn) {
   });
 }
 
-if (scDateInput && typeof scDateInput.showPicker === "function") {
-  scDateInput.addEventListener("focus", () => {
-    try {
-      scDateInput.showPicker();
-    } catch {
-      /* 일부 브라우저·환경에서 미지원 또는 보안 제한 */
-    }
-  });
-}
 
 if (calendarGrid) {
   calendarGrid.addEventListener("click", (event) => {
@@ -1445,6 +1624,7 @@ if (regListBody) {
       }
       if (scTitleInput) scTitleInput.value = item.title || "";
       if (scContentInput) scContentInput.value = item.content || "";
+      syncScDateTriggerLabel();
       applyScheduleCreatePageTitle();
       setView("schedule-create");
       scTitleInput?.focus();
@@ -1482,7 +1662,7 @@ if (scheduleCreateForm) {
 
     if (!date) {
       alert("날짜를 선택해주세요.");
-      scDateInput?.focus();
+      scDateTriggerBtn?.focus();
       return;
     }
     if (

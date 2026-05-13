@@ -113,14 +113,16 @@
 
         <h1 class="title">쉐어 스케줄</h1>
 
-        <form id="login-form" class="login-form">
+        <form id="login-form" class="login-form" autocomplete="off">
           <div class="field-row">
             <label class="field-label" for="user-id">ID</label>
             <input
               id="user-id"
               name="id"
               type="text"
-              autocomplete="username"
+              autocomplete="off"
+              autocorrect="off"
+              spellcheck="false"
               required
             />
           </div>
@@ -129,8 +131,13 @@
             <input
               id="user-pw"
               name="pw"
-              type="password"
-              autocomplete="current-password"
+              type="text"
+              class="login-pw-mask"
+              autocomplete="off"
+              autocapitalize="none"
+              autocorrect="off"
+              spellcheck="false"
+              inputmode="text"
               required
             />
           </div>
@@ -526,9 +533,41 @@
 
         <form id="schedule-create-form" class="schedule-create-form">
           <div class="sc-row">
-            <label class="sc-label" for="sc-date">날짜</label>
+            <label class="sc-label" for="sc-date-trigger">날짜</label>
             <div class="sc-date-wrap">
-              <input id="sc-date" name="date" type="date" class="sc-input" />
+              <input id="sc-date" name="date" type="hidden" value="" autocomplete="off" />
+              <button
+                type="button"
+                id="sc-date-trigger"
+                class="sc-input sc-select sc-date-trigger is-placeholder"
+                aria-haspopup="dialog"
+                aria-expanded="false"
+                aria-controls="sc-date-popover"
+              >
+                <span id="sc-date-label">선택해주세요</span>
+              </button>
+              <div
+                id="sc-date-popover"
+                class="sc-date-popover"
+                hidden
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby="sc-date-popover-title"
+              >
+                <div class="sc-date-popover-head">
+                  <button type="button" id="sc-date-prev-m" class="sc-date-nav" aria-label="이전 달">
+                    ‹
+                  </button>
+                  <div id="sc-date-popover-title" class="sc-date-popover-title"></div>
+                  <button type="button" id="sc-date-next-m" class="sc-date-nav" aria-label="다음 달">
+                    ›
+                  </button>
+                </div>
+                <div class="sc-date-weekdays" aria-hidden="true">
+                  <span>일</span><span>월</span><span>화</span><span>수</span><span>목</span><span>금</span><span>토</span>
+                </div>
+                <div id="sc-date-grid" class="sc-date-grid"></div>
+              </div>
             </div>
           </div>
           <div class="sc-row">

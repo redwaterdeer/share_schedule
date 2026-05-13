@@ -157,6 +157,10 @@ body {
   outline-offset: 1px;
 }
 
+.login-pw-mask {
+  -webkit-text-security: disc;
+}
+
 .remember-row {
   display: flex;
   align-items: center;
@@ -396,20 +400,134 @@ body {
   color: #4f4f4f;
 }
 
-/* 날짜: 모바일 등에서 네이티브 date가 열을 넓히는 것을 막아 아래 select·text와 같은 너비로 */
+/* 일정 등록: 날짜 — 네이티브 date 대신 트리거+달력(모바일 iOS 재설정/확인 없음) */
 .sc-date-wrap {
+  position: relative;
   min-width: 0;
   width: 100%;
   max-width: 100%;
-  border-radius: 8px;
-  overflow: hidden;
 }
 
-.schedule-create-form .sc-date-wrap input.sc-input[type="date"] {
-  display: block;
+button.sc-date-trigger.sc-input.sc-select {
+  display: flex;
+  align-items: center;
   width: 100%;
-  min-width: 0;
   max-width: 100%;
+  min-width: 0;
+  text-align: left;
+  cursor: pointer;
+  font-family: inherit;
+  color: #4f4f4f;
+}
+
+.sc-date-trigger.is-placeholder #sc-date-label {
+  color: #b0b0b0;
+}
+
+.sc-date-popover {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: calc(100% + 6px);
+  z-index: 200;
+  padding: 10px 10px 12px;
+  border-radius: 14px;
+  background: #fff;
+  border: 1.5px solid #d8d8d8;
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.12);
+}
+
+.sc-date-popover-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.sc-date-popover-title {
+  flex: 1;
+  text-align: center;
+  font-size: 16px;
+  font-weight: 700;
+  color: #4f4f4f;
+}
+
+.sc-date-nav {
+  flex: 0 0 auto;
+  width: 36px;
+  height: 36px;
+  border: none;
+  border-radius: 10px;
+  background: #f0f0f0;
+  font-size: 22px;
+  line-height: 1;
+  color: #4f4f4f;
+  cursor: pointer;
+}
+
+.sc-date-nav:active {
+  opacity: 0.85;
+}
+
+.sc-date-weekdays {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 4px;
+  margin-bottom: 4px;
+  text-align: center;
+  font-size: 12px;
+  font-weight: 600;
+  color: #8a8a8a;
+}
+
+.sc-date-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 4px;
+}
+
+.sc-date-grid .sc-date-cell-out {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 36px;
+  font-size: 14px;
+  color: #c8c8c8;
+  user-select: none;
+}
+
+.sc-date-grid .sc-date-day {
+  min-height: 38px;
+  border: none;
+  border-radius: 10px;
+  background: #f4f4f4;
+  font-size: 15px;
+  font-family: inherit;
+  color: #4f4f4f;
+  cursor: pointer;
+}
+
+.sc-date-grid .sc-date-day:hover {
+  background: #ebebeb;
+}
+
+.sc-date-grid .sc-date-day.is-selected {
+  background: var(--accent);
+  color: #fff;
+}
+
+.sc-date-grid .sc-date-day.is-sun {
+  color: #d64545;
+}
+
+.sc-date-grid .sc-date-day.is-sat {
+  color: #2a6fdb;
+}
+
+.sc-date-grid .sc-date-day.is-selected.is-sun,
+.sc-date-grid .sc-date-day.is-selected.is-sat {
+  color: #fff;
 }
 
 .sc-input:focus,
