@@ -107,6 +107,7 @@ const scheduleCreateEditAccountBtn = document.querySelector("#schedule-create-ed
 const scCategoryInput = document.querySelector("#sc-category");
 const scDivisionInput = document.querySelector("#sc-division");
 const scDateInput = document.querySelector("#sc-date");
+const scDurationInput = document.querySelector("#sc-duration");
 const scTitleInput = document.querySelector("#sc-title");
 const scContentInput = document.querySelector("#sc-content");
 const scheduleCreatePageTitle = document.querySelector("#schedule-create-page-title");
@@ -598,8 +599,8 @@ const renderCalendar = () => {
   }
 
   const { year, month } = calendarState;
-  calYearEl.textContent = String(year);
-  calMonthEl.textContent = String(month);
+  calYearEl.textContent = `${year}년`;
+  calMonthEl.textContent = `${month}월`;
 
   const firstOfMonth = new Date(year, month - 1, 1);
   const startWeekday = firstOfMonth.getDay();
@@ -1375,6 +1376,11 @@ if (regListBody) {
       scheduleCreateReturnView = "registered-list";
       if (scheduleCreateForm) scheduleCreateForm.reset();
       if (scDateInput) scDateInput.value = item.date || "";
+      if (scDurationInput) {
+        const d = Number(item.durationDays);
+        const ok = Number.isFinite(d) && d >= 1 && d <= 30;
+        scDurationInput.value = ok ? String(d) : "1";
+      }
       if (scCategoryInput) {
         const cat = item.category || "";
         const vals = [...scCategoryInput.options].map((o) => o.value);
@@ -1416,9 +1422,36 @@ if (scheduleCreateForm) {
     const category = (scCategoryInput?.value || "").trim();
     const division = (scDivisionInput?.value || "").trim();
     const date = scDateInput?.value || "";
+    const durationStr = (scDurationInput?.value || "").trim();
+    const durationDays = Number(durationStr);
     const title = (scTitleInput?.value || "").trim();
     const content = (scContentInput?.value || "").trim();
 
+    if (!date) {
+      alert("날짜를 선택해주세요.");
+      scDateInput?.focus();
+      return;
+    }
+    if (
+      !durationStr ||
+      !Number.isFinite(durationDays) ||
+      durationDays < 1 ||
+      durationDays > 30
+    ) {
+      alert("기간을 선택해주세요.");
+      scDurationInput?.focus();
+      return;
+    }
+    if (!category) {
+      alert("유형을 선택해주세요.");
+      scCategoryInput?.focus();
+      return;
+    }
+    if (!division) {
+      alert("구분을 선택해주세요.");
+      scDivisionInput?.focus();
+      return;
+    }
     if (!title) {
       alert("제목을 입력해주세요.");
       scTitleInput?.focus();
@@ -1447,6 +1480,7 @@ if (scheduleCreateForm) {
         category,
         division,
         date,
+        durationDays,
         title,
         content,
       };
@@ -1458,6 +1492,7 @@ if (scheduleCreateForm) {
         category,
         division,
         date,
+        durationDays,
         title,
         content,
         owner: session.userId,
