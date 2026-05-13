@@ -396,8 +396,15 @@ body {
   color: #4f4f4f;
 }
 
-/* 날짜 입력: 브라우저 기본 최소 너비로 그리드 열이 줄어들지 않는 현상 보정 */
-.schedule-create-form input[type="date"].sc-input {
+/* 날짜 입력: 그리드 열 안에서 다른 입력칸과 동일 너비로 맞춤 */
+.sc-input-slot {
+  min-width: 0;
+  width: 100%;
+}
+
+.schedule-create-form .sc-input-slot input.sc-input[type="date"] {
+  display: block;
+  width: 100%;
   min-width: 0;
   max-width: 100%;
 }

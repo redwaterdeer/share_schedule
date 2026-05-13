@@ -514,6 +514,14 @@ const dateKeysForScheduleRange = (item) => {
   return keys;
 };
 
+/** 달력에서 선택한 날짜가 일정의 시작일~기간 범위에 포함되는지(목록 표시용). */
+const isScheduleOnDateKey = (item, dateKey) => {
+  if (!dateKey) return false;
+  const keys = dateKeysForScheduleRange(item);
+  if (keys.length > 0) return keys.includes(dateKey);
+  return String(item?.date || "").trim() === dateKey;
+};
+
 const buildScheduleCountMap = () => {
   const session = getSession();
   const userId = session?.userId;
@@ -555,7 +563,8 @@ const renderRegisteredListForDate = (dateKey) => {
 
   const items = getSchedules().filter(
     (item) =>
-      item?.date === dateKey && isScheduleVisibleToUser(item, session.userId, activeRoomId)
+      isScheduleOnDateKey(item, dateKey) &&
+      isScheduleVisibleToUser(item, session.userId, activeRoomId)
   );
 
   if (items.length === 0) {
