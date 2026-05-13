@@ -357,7 +357,7 @@ body {
 
 .sc-row {
   display: grid;
-  grid-template-columns: 78px 1fr;
+  grid-template-columns: 78px minmax(0, 1fr);
   gap: 10px;
   margin-bottom: 10px;
   align-items: center;
@@ -394,6 +394,12 @@ body {
   padding: 0 12px;
   font-family: inherit;
   color: #4f4f4f;
+}
+
+/* 날짜 입력: 브라우저 기본 최소 너비로 그리드 열이 줄어들지 않는 현상 보정 */
+.schedule-create-form input[type="date"].sc-input {
+  min-width: 0;
+  max-width: 100%;
 }
 
 .sc-input:focus,

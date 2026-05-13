@@ -488,6 +488,32 @@ const isScheduleVisibleToUser = (item, userId, activeRoomId) => {
   return true;
 };
 
+/** 시작일·기간(일)에 따라 달력 건수 집계용 날짜 키 목록. 파싱 불가 시 빈 배열. */
+const dateKeysForScheduleRange = (item) => {
+  const startStr = String(item?.date || "").trim();
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(startStr)) return [];
+  const [y, m, d] = startStr.split("-").map(Number);
+  const start = new Date(y, m - 1, d);
+  if (
+    start.getFullYear() !== y ||
+    start.getMonth() !== m - 1 ||
+    start.getDate() !== d
+  ) {
+    return [];
+  }
+  let dur = Number(item.durationDays);
+  if (!Number.isFinite(dur) || dur < 1) dur = 1;
+  if (dur > 30) dur = 30;
+  const p2 = (n) => String(n).padStart(2, "0");
+  const keys = [];
+  for (let i = 0; i < dur; i++) {
+    const dt = new Date(start);
+    dt.setDate(start.getDate() + i);
+    keys.push(`${dt.getFullYear()}-${p2(dt.getMonth() + 1)}-${p2(dt.getDate())}`);
+  }
+  return keys;
+};
+
 const buildScheduleCountMap = () => {
   const session = getSession();
   const userId = session?.userId;
@@ -499,7 +525,15 @@ const buildScheduleCountMap = () => {
 
   for (const item of getSchedules()) {
     if (!isScheduleVisibleToUser(item, userId, activeRoomId)) continue;
-    counts.set(item.date, (counts.get(item.date) || 0) + 1);
+    const keys = dateKeysForScheduleRange(item);
+    if (keys.length === 0) {
+      const fallback = String(item.date || "").trim();
+      if (fallback) counts.set(fallback, (counts.get(fallback) || 0) + 1);
+      continue;
+    }
+    for (const dk of keys) {
+      counts.set(dk, (counts.get(dk) || 0) + 1);
+    }
   }
   return counts;
 };
